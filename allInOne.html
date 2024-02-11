@@ -1,0 +1,224 @@
+<!-- 
+Task: Write an app, who read csv file and longest Pair of employees who have worked together. 
+Creator: Dimitar Gadzhev
+Creaton Date: 2024-02-11
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0">
+  <title>Simple HTML with JavaScript</title>
+  <style>
+	table, th, td {
+	  border: 1px solid black;
+	}
+	
+	td {
+	  text-align: center;
+	}
+  </style>
+</head>
+<body>
+  <h1>Select a CSV file:</h1>
+  <input type="file" id="csvFileInput">
+  <br>
+  <button id="analizeCsvButton", disabled=true>Find longest pair</button>
+  <br>
+  <table id="resultTable", style="width: 100%; height: 50px; visibility: hidden"></table>
+  <br>
+  <label id="infoLabel", style="visibility: hidden">There are no pairs</label>
+
+  <script>
+    // Get a reference to the file input and submit button elements
+	class Employment {
+            constructor(employeId, jobId, startDate, endDate) {
+               this.employeId = employeId;
+               this.jobId = jobId;
+               this.startDate = startDate;
+               this.endDate = endDate;
+            }
+         }
+		 
+    const csvFileInput = document.getElementById("csvFileInput");
+    const analizeCsvButton = document.getElementById("analizeCsvButton");
+	let csvFile = null;
+	const currentDate = new Date();
+	let content;
+	const paramsPerRow = 4;
+
+    // Add a change event listener to the file input
+    csvFileInput.addEventListener("change", function(event) {
+	  const analizeCsvButton = document.getElementById("analizeCsvButton");
+	  analizeCsvButton.disabled = true;
+	  const resultTable = document.getElementById("resultTable");
+	  resultTable.style.visibility = "hidden";
+	  resultTable.innerHTML = undefined;
+	  const infoLabel = document.getElementById("infoLabel");
+	  infoLabel.style.visibility = "hidden";
+	  
+	  selectFile(event);
+	  loadFileData();
+	  if (csvFile !== null) {
+	    console.log("Readed file:", csvFile.name);
+	  }
+    });
+	
+    function selectFile(event) {
+      // Get the selected file object
+	  csvFile = event.target.files[0];
+
+	  // Check if a file is selected
+	  if (csvFile) {
+		// Check if the file extension is CSV
+		const extension = csvFile.name.split('.').pop().toLowerCase();
+		if (extension !== "csv") {
+		  alert("Please select a CSV file.");
+		  
+		  document.getElementById("csvFileInput").value = "";
+		  csvFile = null;
+		  
+		  return; // Prevent further processing
+		}
+	  
+		// Display the file name
+		alert("Selected file: " + csvFile.name);
+		console.log("Selected file:", csvFile.name);
+	  } else {
+	    console.log("No file selected.");
+	  }
+    }
+
+    function loadFileData() {
+	  if (csvFile !== null) {
+	    const fileContent = csvFile;
+		const reader = new FileReader(csvFile);
+		reader.readAsText(csvFile);
+		reader.onload = () => {
+		  content = reader.result;
+		  const analizeCsvButton = document.getElementById("analizeCsvButton");
+	      analizeCsvButton.disabled = false;
+		}
+	  }
+	}
+	
+	function splitTextToEmployments(content) {
+	  const employments = [];
+	  if (content) {
+		const lines = content.split("\n");
+
+		for (let i in lines) {
+		  line = lines[i].split("\r")[0];
+		  employment = createEmploymentByLine(line);
+		  if (employment != null) {
+		    employments.push(employment);
+		  }
+		}
+		
+		return employments;
+	  }
+	  
+	  return null;
+	}
+	
+	function createEmploymentByLine(line) {
+	  dataSet = line.split(",");
+	  if (dataSet.length == paramsPerRow) {
+        startDate = new Date(clearSpaces(dataSet[2]));
+		endDate = replaceMisingEndDate(clearSpaces(dataSet[3]), currentDate);
+	    const employment = new Employment(dataSet[0], dataSet[1], startDate, endDate);
+		
+		return employment;
+	  }
+	}
+
+	function clearSpaces(date) {
+      return date.replace(" ", "");
+	}
+	
+	function replaceMisingEndDate(originalDate, currentDate) {
+	  if (originalDate.toLowerCase() == "null") {
+	    return currentDate;
+	  }
+	  
+	  return new Date(originalDate);
+	}
+	
+	function findLongestPair(employments) {
+	  const employmentsCount = employments.length;
+	  if (employmentsCount < 2) return null;
+	  
+	  maxPeriod = 0;
+	  firstId = "";
+	  secondId = "";
+	  projectId = "";
+	  
+	  for (let i = 0; i < employmentsCount - 1; i++) {
+	    for (j = i + 1; j < employmentsCount; j++) {
+		  first = employments[i];
+		  second = employments[j];
+		  
+		  if (first.employeId != second.employeId 
+		      && first.jobId == second.jobId 
+		      && (first.startDate < second.endDate || second.startDate < first.endDate)) {
+		    const period = calculatePairPeriod(first.startDate, first.endDate, second.startDate, second.endDate);
+			if (period > maxPeriod) {
+			  maxPeriod = period;
+			  firstId = first.employeId;
+			  secondId = second.employeId;
+			  projectId = first.jobId;
+			}
+		  }
+		}
+	  }
+	  
+	  if (maxPeriod > 0) {
+	    return {maxPeriod: maxPeriod, firstId: firstId, secondId: secondId, projectId: projectId};
+	  }
+	  
+	  return null;
+	}
+
+    function calculatePairPeriod(fsd, fed, ssd, sed) {
+	  startPeriod = fsd > ssd ? fsd : ssd;
+	  endPeriod = fed < sed ? fed : sed;
+	  
+	  return endPeriod - startPeriod > 0 ? endPeriod - startPeriod : 0;
+	}
+	
+	function presentResults(employment) {
+	  maxPeriodIdDays = employment.maxPeriod / 86400000; // 1000*60*60*24
+	  
+	  var table = "<tr><th>Employee ID #1</th><th>Employee ID #2</th><th>Project ID</th><th>Days worked</th></tr>";
+	  table += "<tr><td>" + employment.firstId + "</td>";
+	  table += "<td>" + employment.secondId + "</td>";
+	  table += "<td>" + employment.projectId + "</td>";
+	  table += "<td>" + maxPeriodIdDays + "</td></tr>";
+	  
+	  return table;
+	}
+
+    // Add a click event listener to the Analize button
+    analizeCsvButton.addEventListener("click", function() {
+      console.log("Start the analysis.");
+	  const employments = splitTextToEmployments(content);
+	  if (employments == null) {
+		console.log("The CSV doesn't contains any one valid row with expected data.");
+		
+		return;
+	  }
+	  
+	  const result = findLongestPair(employments);
+
+	  console.log("Start result representation.");
+	  if (result != null) {
+	    const resultTable = document.getElementById("resultTable");
+	    resultTable.style.visibility = "visible";
+		resultTable.innerHTML = presentResults(result);
+	  } else {
+	    const infoLabel = document.getElementById("infoLabel");
+	    infoLabel.style.visibility = "visible";
+	  }
+    });
+  </script>
+</body>
+</html>
